@@ -37,7 +37,8 @@
 -module(riak_core_throttle).
 
 %% API
--export([set_throttle/2,
+-export([get_throttle/1,
+         set_throttle/2,
          clear_throttle/1,
          set_limits/2,
          clear_limits/1,
@@ -45,7 +46,7 @@
          throttle/1]).
 
 -ifdef(TEST).
--export([get_throttle/1, get_throttle_for_load/2]).
+-export([get_throttle_for_load/2]).
 -define(SLEEP(Time), Time).
 -else.
 -define(SLEEP(Time), timer:sleep(Time)).
