@@ -53,7 +53,8 @@ test_set_throttle([Key1, Key2|_]) ->
      ?_assertError({badkey, Key2}, riak_core_throttle:throttle(Key2))].
 
 test_set_throttle_by_load_with_no_limits([Key|_]) ->
-    [?_assertError({no_limits, Key},
+    [?_assertEqual(undefined, riak_core_throttle:get_limits(Key)),
+     ?_assertError({no_limits, Key},
                    riak_core_throttle:set_throttle_by_load(Key, 50))].
 
 test_set_throttle_by_load_with_good_limits([Key, Key2|_]) ->
