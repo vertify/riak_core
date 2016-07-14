@@ -55,7 +55,7 @@
 
 -type activity_key() :: atom().
 -type throttle_time() :: non_neg_integer().
--type load_factor() :: integer().
+-type load_factor() :: number() | atom() | tuple().
 -type limits() :: [{load_factor(), throttle_time()}, ...].
 
 -export_type([activity_key/0, throttle_time/0, load_factor/0, limits/0]).
@@ -110,15 +110,21 @@ get_limits(Key) ->
 clear_limits(Key) ->
     application:unset_env(riak_core, ?THROTTLE_LIMITS_KEY(Key)).
 
-%% @doc Sets the throttle for the activity identified by `Key' to a value
+%% @doc <p>Sets the throttle for the activity identified by `Key' to a value
 %% determined by consulting the limits for the activity. The throttle value
 %% is the value associated with the largest load factor <= `LoadFactor'.
-%% If there are no limits defined for the activity, exits with
-%% error({no_limits, Key}).
+%% Normally the `LoadFactor' will be a number representing the current level
+%% of load for the activity, but it is also allowed to pass an atom or a tuple
+%% as the %% `LoadFactor'. This can be used when a numeric value cannot be
+%% established, %% and results in using the throttle value for the largest load
+%% factor defined %% in the limits for the activity.</p>
+%%
+%% <p>If there are no limits defined for the activity, exits with
+%% error({no_limits, Key}).</p>
 %% @see set_limits/2
 -spec set_throttle_by_load(activity_key(), load_factor()) ->
     throttle_time().
-set_throttle_by_load(Key, LoadFactor) when is_integer(LoadFactor) ->
+set_throttle_by_load(Key, LoadFactor) ->
     case get_throttle_for_load(Key, LoadFactor) of
         undefined ->
             error({no_limits, Key});
@@ -156,7 +162,7 @@ get_throttle_for_load(Key, LoadFactor) ->
 
 find_throttle_for_load_factor([], _LoadFactor) ->
     undefined;
-find_throttle_for_load_factor(Limits, LoadFactor) ->
+find_throttle_for_load_factor(Limits, LoadFactor) when is_number(LoadFactor) ->
     Candidates = lists:takewhile(
         fun({Load, _Time}) ->
             LoadFactor >= Load
@@ -168,6 +174,10 @@ find_throttle_for_load_factor(Limits, LoadFactor) ->
         _ ->
             lists:last(Candidates)
     end,
+    ThrottleVal;
+find_throttle_for_load_factor(Limits, LoadFactor)
+  when is_atom(LoadFactor); is_tuple(LoadFactor) ->
+    {_Load, ThrottleVal} = lists:last(Limits),
     ThrottleVal.
 
 validate_limits(Key, Limits) ->

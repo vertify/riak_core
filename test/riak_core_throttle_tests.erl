@@ -74,6 +74,8 @@ test_set_throttle_by_load_with_good_limits([Key, Key2|_]) ->
      ?_assertEqual(10, riak_core_throttle:set_throttle_by_load(Key, 100)),
      ?_assertEqual(10, riak_core_throttle:set_throttle_by_load(Key, 101)),
      ?_assertEqual(10, riak_core_throttle:set_throttle_by_load(Key, 10000001)),
+     ?_assertEqual(10, riak_core_throttle:set_throttle_by_load(Key, max)),
+     ?_assertEqual(10, riak_core_throttle:set_throttle_by_load(Key, {max})),
      ?_assertError({no_limits, Key2},
                    riak_core_throttle:set_throttle_by_load(Key2, 100))
     ].
