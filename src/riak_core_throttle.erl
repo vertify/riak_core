@@ -98,7 +98,12 @@ set_limits(Key, Limits) ->
 %% otherwise returns `undefined'.
 -spec get_limits(activity_key()) -> limits() | undefined.
 get_limits(Key) ->
-    application:get_env(riak_core, ?THROTTLE_LIMITS_KEY(Key)).
+    case application:get_env(riak_core, ?THROTTLE_LIMITS_KEY(Key)) of
+        {ok, Limits} ->
+            Limits;
+        _ ->
+            undefined
+    end.
 
 %% @doc Clears the limits for the activity identified by `Key'.
 -spec clear_limits(activity_key()) -> ok.
@@ -143,10 +148,10 @@ get_throttle(Key) ->
     throttle_time() | undefined.
 get_throttle_for_load(Key, LoadFactor) ->
     case get_limits(Key) of
-        {ok, Limits} ->
-            find_throttle_for_load_factor(Limits, LoadFactor);
-        _ ->
-            undefined
+        undefined ->
+            undefined;
+        Limits ->
+            find_throttle_for_load_factor(Limits, LoadFactor)
     end.
 
 find_throttle_for_load_factor([], _LoadFactor) ->
