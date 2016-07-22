@@ -20,12 +20,13 @@
 -include_lib("eunit/include/eunit.hrl").
 
 activity_keys() ->
-    [some_activity, another_activity].
+    [some_activity, another_activity, yet_another_activity].
 
 clear_throttles(ActivityKeys) ->
     lists:foreach(fun(Key) ->
                           riak_core_throttle:clear_throttle(Key),
-                          riak_core_throttle:clear_limits(Key)
+                          riak_core_throttle:clear_limits(Key),
+                          riak_core_throttle:enable_throttle(Key)
                   end,
                   ActivityKeys).
 
@@ -35,6 +36,7 @@ throttle_test_() ->
      fun clear_throttles/1,
      [fun test_throttle_badkey/1,
       fun test_set_throttle/1,
+      fun test_throttle_kill_switch/1,
       fun test_set_throttle_by_load_with_no_limits/1,
       fun test_set_throttle_by_load_with_good_limits/1,
       fun test_set_throttle_by_load_actually_sets_throttle/1,
@@ -51,6 +53,20 @@ test_set_throttle([Key1, Key2|_]) ->
     [?_assertEqual(42, riak_core_throttle:throttle(Key1)),
      ?_assertEqual(42, riak_core_throttle:get_throttle(Key1)),
      ?_assertError({badkey, Key2}, riak_core_throttle:throttle(Key2))].
+
+test_throttle_kill_switch([Key1, Key2, Key3|_]) ->
+    ok = riak_core_throttle:set_throttle(Key1, 42),
+    ok = riak_core_throttle:set_throttle(Key2, 64),
+    ok = riak_core_throttle:set_throttle(Key3, 11),
+    ok = riak_core_throttle:disable_throttle(Key1),
+    ok = riak_core_throttle:disable_throttle(Key2),
+    ok = riak_core_throttle:enable_throttle(Key2),
+    [?_assertNot(riak_core_throttle:is_throttle_enabled(Key1)),
+     ?_assert(riak_core_throttle:is_throttle_enabled(Key2)),
+     ?_assert(riak_core_throttle:is_throttle_enabled(Key3)),
+     ?_assertEqual(0, riak_core_throttle:throttle(Key1)),
+     ?_assertEqual(64, riak_core_throttle:throttle(Key2)),
+     ?_assertEqual(11, riak_core_throttle:throttle(Key3))].
 
 test_set_throttle_by_load_with_no_limits([Key|_]) ->
     [?_assertEqual(undefined, riak_core_throttle:get_limits(Key)),
